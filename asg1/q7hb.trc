@@ -1,0 +1,26 @@
+ ========================================================
+
+     Name: Alwahab Mohammad
+
+     Panther-ID: x x x - 0253 (last 4 digits)
+
+     Course: COP 4710
+
+     Assignment#: 1
+
+     Due: Tue, Sep 8, 2020
+
+     I hereby certify that this work is my own and none of
+     it is the work of any other person.
+
+                             Signature: Alwahab Mohammad
+     =========================================================
+trc7 :=
+ {A.title, B.branchName |
+  book(A) and branch(B) and
+  (exists C)
+  (inventory(C) and
+ C.bookCode = A.bookCode and 
+C.branchNum = B.branchNum and 
+C.onHand > 0 and
+A.price > 20)};

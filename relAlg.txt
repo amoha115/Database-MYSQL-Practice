@@ -1,0 +1,95 @@
+
+q1ppa1 := select((creditLimit > 8000) and (repNum = '65')) (customer);
+ %Find entries with more than 8000 and has repnum equal to 65
+q1ppa2 := project customerNum, city (q1ppa1);
+ %Show only the customernum and city of the above result
+
+q2ppa1(orderNum, orderDate, cNum) :=  orders;
+%rename to remove duplication
+q2ppa2 := customer product q2ppa1;
+ %place tables together
+q2ppa3 := select(customerNum = cNum)(q2ppa2);
+ %match customer numbers to have the appropraite table
+q(oNum, pNum, numOrdered, quotedPrice) := orderLine;
+ %rename to remove duplication
+q2ppa4 := q2ppa3 product q; 
+%place tables together
+q2 := select(oNum = orderNum)(q2ppa4);
+ %match order numbers to have the appropraite table
+q3 := q2 product part; 
+%place tables together
+q4 := select(pNum = partNum)(q3); 
+%match part numbers to have the appropraite table
+q5 := select((class = 'SG') or (class = 'HW'))(q4); 
+%find entries with SG and HW and make table
+q6 := project customerName, orderDate (q5);
+%show only the customer name and order date of the above created table
+
+q3ppa1 := project onHand (part);
+%show what we need to find the min of
+q3ppa1cp(onHand1) := q3ppa1;
+%create copy
+n := project onHand(select onHand > onHand1 (q3ppa1 product q3ppa1cp));
+%has values not the min
+m :=q3ppa1 difference n;
+%has minimums
+w := part njoin m;
+%matches who has min
+p := project partNum, description, onHand (w);
+%show relevant details
+
+************************************
+%division
+allCustomers := project customerName (customer);
+hotlist := project description (part);
+expectedPurchase := allCustomers product hotlist;
+missingPurchase := expectedPurchase difference p;
+%p being the previous query result
+ineligibleCustomers := project customerName (missingPurchase);
+quotient := allCustomers difference ineligibleCustomers;
+*************************************
+
+q5hb (aNum, authorLast, authorFirst) := author;
+%copy of author
+q := q5hb product wrote;
+%combine two tables
+w := select (aNum = authorNum)(q);
+%match correct values
+cp (bCode, title, publisherCode, type, price, paperback) := book;
+%create copy
+e := cp product w;
+%combine tables
+r := select((bCode = bookCode) and (publisherCode = 'JP'))(e);
+%show quesry with matching book codes and matches JP publisher
+t := project authorLast, authorFirst (r);
+%display names of authors
+
+q6hb (bCode, bNum, onHand) := inventory;
+%rename inventory
+q1 := book product q6hb;
+%combine two tables through product
+q2 := select(bCode = bookCode)(q1);
+%keep real books
+q3 := q2 product branch;
+%product the branch with the table
+q4 := select ((bNum = branchNum) and (price > 20) and (onHand > 0))(q3);
+%keep real branch with book entries and price above 20 and is available
+q5 := project title, branchName (q4);
+%show relevant details
+
+trc7 :=
+ {A.title, B.branchName |
+  book(A) and branch(B) and
+  (exists C)
+  (inventory(C) and
+ C.bookCode = A.bookCode and 
+C.branchNum = B.branchNum and 
+C.onHand > 0 and
+A.price > 20)};
+
+drc7 := 
+  {TITLE,BRANCHNAME|
+    (exists DNO)
+        (book(BOOKCODE, TITLE,_,_,PRICE>20,_) and 
+         branch(BRANCHNUM, BRANCHNAME, _, _) and
+          inventory(BOOKCODE, BRANCHNUM, ONHAND))};

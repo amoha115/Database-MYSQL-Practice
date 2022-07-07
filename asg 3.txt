@@ -1,0 +1,227 @@
+/* =============================================
+     Name: Alwahab Mohammad
+     Panther-ID: x x x - 0253
+     Course: COP 4710 
+     Assignment#: 3
+     Due: Thu, Sep 24, 2020
+     I hereby certify that this work is my own and none of
+     it is the work of any other person.
+                             Signature: Alwahab Mohammad
+   Description:	MySQL stored procedure for phpMyAdmin environment (XAMPP session)
+    For a given Rep number, check if this Rep exists.
+     If so, find The firstname and the lastname of the rep.
+	The number of customers associated with this rep.
+	The total balance of all these customers.
+	The number of orders placed by all these customers.
+	The total revenue of the orders placed by all these customers.
+   =============================================
+USE premiere;
+*/
+CREATE DEFINER=`root`@`localhost` PROCEDURE `uspGetRepStats`(
+	-- Add the parameters for the stored procedure here
+	IN repNum CHAR(2) )
+	
+myModule: BEGIN
+  -- Declare local variables
+  DECLARE currRep VARCHAR(30);
+  DECLARE numCust VARCHAR(8);
+  DECLARE totalBalance VARCHAR(15);
+  DECLARE numberOrders INT DEFAULT 0;
+  DECLARE custNum VARCHAR(5);
+  DECLARE more_rows BOOLEAN DEFAULT TRUE;
+  DECLARE num_rows INT DEFAULT 0;
+  DECLARE number INT DEFAULT 0;
+  
+  DECLARE totalRevenue INT DEFAULT 0;
+  DECLARE multRevenue INT DEFAULT 0;
+
+  -- Declare the cursor
+  DECLARE customer_number CURSOR FOR
+    SELECT CustomerNum
+  	FROM customer
+  	WHERE repnum = repNumber;
+
+  -- Declare 'handlers' for exceptions
+  DECLARE CONTINUE HANDLER FOR NOT FOUND
+    SET more_rows = FALSE;
+    
+  -- Insert all necessary statements for the procedure
+  SELECT CONCAT(firstname, ' ', lastname) INTO currRep
+  FROM rep
+  WHERE repnum = repNumber;
+  IF (currRep is NULL) THEN
+    SELECT CONCAT('No rep exists with the rep number ', repNumber) As ErrorMessage;
+  ELSE
+  	SELECT CONCAT('Statistics of the sales rep: ', repNumber);
+    SELECT CONCAT('Name: ', currRep);
+	
+  -- find number of customers under rep
+  SELECT COUNT(repnum)INTO numCust
+  FROM customer
+  WHERE repnum = repnumber;
+  SELECT CONCAT('Number of customers: ',numCust);
+  
+  -- find total balance of customers associated to rep
+  SELECT SUM(balance) INTO totalBalance
+  FROM customer
+  WHERE repnum = repnumber;
+  SELECT CONCAT('Total balance of these customers: ',totalBalance);
+  
+  -- find the number of orders from all customers associated to rep
+  OPEN customer_number;
+  SELECT FOUND_ROWS() INTO num_rows;
+  IF (num_rows = 0) THEN
+	SELECT CONCAT('customers have no orders.') As Result;
+    LEAVE myModule; -- exit from this stored procedure
+  END IF;
+  WHILE (num_rows > 0) Do
+  
+  -- retrieve one row of the result of the query through the cursor
+  FETCH NEXT FROM customer_number INTO custNum;
+  
+  -- check if we've processed them all
+	  IF more_rows = FALSE THEN
+          CLOSE customer_number;
+		  LEAVE myModule; -- exit from this stored procedure
+	  END IF;
+	  
+  -- find number of orders from that customer
+  SELECT COUNT(CustomerNum)INTO number
+  FROM orders
+  WHERE customernum = custnum;
+  
+  -- sum up orders from all customers
+  SET numberOrders = numberOrders + number;
+
+-- Below is a failed attempt at the last query
+/*
+  -- total revenue of rep
+  SELECT (NumOrdered * QuotedPrice) INTO multRevenue
+  FROM orderline
+  WHERE ordernum = ALL
+  (SELECT ordernum
+   FROM orders
+   WHERE customerNum = custNum);
+  totalRevenue = totalRevenue + multRevenue;
+  */
+  
+  
+  -- decrement the number of rows to be fetched
+  SET num_rows = num_rows - 1;
+  END WHILE;
+  SELECT CONCAT('Number of orders: ', numberOrders);
+  END IF;
+END
+
+--Below is another failed approach to the last query
+/*
+myModule: BEGIN
+  -- Declare local variables
+  DECLARE currRep VARCHAR(30);
+  DECLARE numCust VARCHAR(8);
+  DECLARE totalBalance VARCHAR(15);
+  DECLARE numberOrders INT DEFAULT 0;
+  DECLARE custNum VARCHAR(5);
+  DECLARE number2 INT DEFAULT 0;
+  DECLARE number3 INT DEFAULT 0;
+  DECLARE addedRevenue INT DEFAULT 0;
+  DECLARE totRevenue INT DEFAULT 0;
+  DECLARE more_rows BOOLEAN DEFAULT TRUE;
+  DECLARE num_rows INT DEFAULT 0;
+  DECLARE num_rows2 INT DEFAULT 0;
+  DECLARE number INT DEFAULT 0;
+
+  -- Declare the cursor
+  DECLARE customer_number CURSOR FOR
+    SELECT CustomerNum
+  	FROM customer
+  	WHERE repnum = repNumber;
+    
+  -- Declare another cursor
+  DECLARE revenue_order_line CURSOR FOR
+  SELECT NumOrdered, QuotedPrice
+  FROM orderline
+  WHERE ordernum = ALL
+  (SELECT ordernum
+   FROM orders
+   WHERE customerNum = custNum);
+   
+  -- Declare 'handlers' for exceptions
+  DECLARE CONTINUE HANDLER FOR NOT FOUND
+    SET more_rows = FALSE;
+    
+  -- Insert all necessary statements for the procedure
+  SELECT CONCAT(firstname, ' ', lastname) INTO currRep
+  FROM rep
+  WHERE repnum = repNumber;
+  IF (currRep is NULL) THEN
+    SELECT CONCAT('No rep exists with the rep number ', repNumber) As ErrorMessage;
+  ELSE
+  	SELECT CONCAT('Statistics of the sales rep: ', repNumber);
+    SELECT CONCAT('Name: ', currRep);
+  -- find number of customers under rep
+  SELECT COUNT(repnum)INTO numCust
+  FROM customer
+  WHERE repnum = repnumber;
+  SELECT CONCAT('Number of customers: ',numCust);
+  -- find total balance of customers associated to rep
+  SELECT SUM(balance) INTO totalBalance
+  FROM customer
+  WHERE repnum = repnumber;
+  SELECT CONCAT('Total balance of these customers: ',totalBalance);
+  -- find the number of orders from all customers associated to rep
+  OPEN customer_number;
+  SELECT FOUND_ROWS() INTO num_rows;
+  OPEN revenue_order_line;
+  SELECT FOUND_ROWS() INTO num_rows2;
+  IF (num_rows = 0) THEN
+	SELECT CONCAT('customers have no orders.') As Result;
+    LEAVE myModule; -- exit from this stored procedure
+  END IF;
+  WHILE (num_rows > 0) Do
+  
+	  -- retrieve one row of the result of the query through the cursor
+  FETCH NEXT FROM customer_number INTO custNum;
+  
+  -- check if we've processed them all
+	  IF more_rows = FALSE THEN
+          CLOSE customer_number;
+		  LEAVE myModule; -- exit from this stored procedure
+	  END IF;
+      
+  -- find number of orders from that customer
+  SELECT COUNT(CustomerNum)INTO number
+  FROM orders
+  WHERE customernum = custnum;
+  
+  -- sum up orders from all customers
+  SET numberOrders = numberOrders + number;
+  
+   -- Total Revenue of rep
+  IF (num_rows2 = 0) THEN
+	SELECT CONCAT('rep made no revenue.') As Result;
+    LEAVE myModule; -- exit from this stored procedure
+  END IF;
+   
+   WHILE (num_rows2 > 0) Do
+  
+	  -- retrieve one row of the result of the query through the cursor
+  FETCH NEXT FROM revenue_order_line INTO number2, number3;
+  
+  -- check if we've processed them all
+	  IF more_rows = FALSE THEN
+          CLOSE revenue_order_line;
+		  LEAVE myModule; -- exit from this stored procedure
+	  END IF;
+  SET addedRevenue = addedRevenue + (number2 * number3);
+  SET num_rows2 = num_rows2 - 1;
+  END WHILE;
+  SET totRevenue = totRevenue + addedRevenue;
+  -- decrement the number of rows to be fetched
+  SET num_rows = num_rows - 1;
+  END WHILE;
+  SELECT CONCAT('Number of orders: ', numberOrders);
+  SELECT CONCAT('Total Revenue: ', totRevenue);
+  END IF;
+END
+*/

@@ -1,0 +1,188 @@
+/*
+========================================================
+
+Name: Alwahab Mohammad
+
+Panther-ID: x x x - 0253
+
+Course: COP 4710
+
+Assignment#: 5
+
+Due: Thu, Oct 8, 2020
+
+I hereby certify that this work is my own and none of
+it is the work of any other person.
+
+                   Signature: Alwahab Mohammad
+
+=========================================================
+*/
+
+//STEP 1. Import required packages
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.SQLWarning;
+
+import javax.swing.JOptionPane;
+import javax.swing.JPasswordField;
+import java.util.Scanner;
+
+
+public class TestDB2 {
+    // JDBC driver name and database URL
+    static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
+    static final String URL = "jdbc:mysql://localhost:3306/";
+    //static final String URL = "jdbc:mysql://127.0.0.1:3306/";
+	
+    //  Database credentials
+    static final String DBASE = "company";
+    static final String USER = "root";
+    static final String PASS = "";
+	int c = 0;
+	int avgwork = 0;
+	
+	public static void main(String[] args) {
+        String projectnumber;
+        Scanner console = new Scanner(System.in);
+        Connection conn = null;
+        PreparedStatement stmt = null;
+
+try {
+            //STEP 2: Register JDBC driver
+            Class.forName(JDBC_DRIVER);
+
+            //STEP 3: Open a connection
+            conn = DriverManager.getConnection(URL + DBASE, USER, PASS);
+
+            if (conn != null) {
+                System.out.println();
+                System.out.println("Successfully connected to the " + DBASE + " database");
+                System.out.println();
+                String outerQuery = "SELECT	pnumber, pname, dnum " +
+                    "FROM	project " +
+                    "WHERE	pnumber = ?";
+                stmt1 = conn.prepareStatement(outerQuery);
+                String innerQuery = "SELECT	dname, fname, lname FROM department, employee WHERE	mgrssn = ssn AND dnumber = ?";
+                stmt2 = conn.prepareStatement(innerQuery);
+				String innerQuery2 = "SELECT count(*) FROM works_on WHERE pno = ?";
+                stmt3 = conn.prepareStatement(innerQuery2);
+				
+				//The while loop below is not tested. comment out if the program does not work
+				
+				
+				//while(console.hasNextLine()){
+				//c++ //goes towards number of queries used to find work average
+				System.out.print("\nEnter a project number: ");
+                projectnumber = console.nextLine();
+				
+				stmt1.clearParameters();
+                stmt1.setString(1, projectnumber); // replaces the first argument (?) with inpdname value
+                //if (debug) // stmt1 is a PreparedStatement object and cannot be displayed
+                //  System.out.println("SQL was:\n "+stmt1.toString());
+                //STEP 4: Execute outer query
+				ResultSet rs1 = stmt1.executeQuery();
+                System.out.println("\nOuter loop output:");
+                while (rs1.next()) {
+                    String pnumber = rs1.getString(1);
+                    String pname = rs1.getString(2);
+                    String dnum = rs1.getString(3);
+					
+					SQLWarning warning = stmt1.getWarnings();
+                    if (warning != null) {
+                        System.out.println("\n---Warning---\n");
+                        while (warning != null) {
+                            System.out.println("Message: " + warning.getMessage());
+                            System.out.println("SQLState: " + warning.getSQLState());
+                            System.out.print("Vendor error code: ");
+                            System.out.println(warning.getErrorCode());
+                            System.out.println("");
+                            warning = warning.getNextWarning();
+                        }
+                    }
+					System.out.println("  " + pnumber + " " + pname);
+                    stmt2.clearParameters();
+                    stmt2.setString(1, dnum); // replaces the first argument (?) with dnum value
+					stmt3.clearParameters();
+                    stmt3.setString(1, pnumber); // replaces the first argument (?) with pnumber value
+					//STEP 5: Execute inner queries
+                    ResultSet rs2 = stmt2.executeQuery();
+                    System.out.println("    Inner loop output:");
+                    while (rs2.next()) {
+                        String departmentname = rs2.getString(1);
+						String firstname = rs2.getString(2);
+						String lastname = rs2.getString(3);
+                        warning = stmt2.getWarnings();
+                        if (warning != null) {
+                            System.out.println("\n---Warning---\n");
+                            while (warning != null) {
+                                System.out.println("Message: " + warning.getMessage());
+                                System.out.println("SQLState: " + warning.getSQLState());
+                                System.out.print("Vendor error code: ");
+                                System.out.println(warning.getErrorCode());
+                                System.out.println("");
+                                warning = warning.getNextWarning();
+                            }
+                        }
+                        System.out.println("      " + departmentname);
+						System.out.println("      " + firstname + lastname);
+					}
+                    rs2.close();
+					
+					ResultSet rs3 = stmt3.executeQuery();
+                    System.out.println("    Inner loop output:");
+                    while (rs3.next()) {
+                        String workassign = rs3.getString(1);
+                        warning = stmt3.getWarnings();
+                        if (warning != null) {
+                            System.out.println("\n---Warning---\n");
+                            while (warning != null) {
+                                System.out.println("Message: " + warning.getMessage());
+                                System.out.println("SQLState: " + warning.getSQLState());
+                                System.out.print("Vendor error code: ");
+                                System.out.println(warning.getErrorCode());
+                                System.out.println("");
+                                warning = warning.getNextWarning();
+                            }
+                        }
+                        System.out.println("      " + workassign);
+					}
+                    rs3.close();
+				}
+                rs1.close();
+            }
+			
+			//} //for while loop
+			
+			
+        } catch (SQLException se) {
+            //Handle errors for JDBC
+            se.printStackTrace();
+        } catch (Exception e) {
+            //Handle errors for Class.forName
+            e.printStackTrace();
+        } finally {
+            //finally block used to close resources
+            //STEP 6: Clean-up environment
+            try {
+                if (stmt1 != null)
+                    stmt1.close();
+                if (stmt2 != null)
+                    stmt2.close();
+				if (stmt3 != null)
+                    stmt3.close();
+            } catch (SQLException se2) {} // nothing we can do
+            try {
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            } //end finally try
+        } //end try
+        System.out.println("\nBye!");
+    } //end main
+} //end TestDB4
+					
